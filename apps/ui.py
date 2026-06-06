@@ -2235,8 +2235,6 @@ class MTManager:
         t = self._terminal(silent=False)
         if not t:
             return
-        f  = self._font
-        fm = self._font_mono
         mt_type = t.get("type", "MT4")
         if mt_type == "MT4":
             src_root_str = t.get("install_path", "")
@@ -2261,102 +2259,10 @@ class MTManager:
             return
 
         base_name = src_folder.name
-        win = tk.Toplevel(self.root); win.title("Duplicate MT")
-        win.configure(bg=BG); win.resizable(False, False); win.attributes("-topmost", True)
-        win.update_idletasks()
-        rx = self.root.winfo_x() + self.root.winfo_width()  // 2 - 270
-        ry = self.root.winfo_y() + self.root.winfo_height() // 2 - 190
-        win.geometry(f"540x380+{rx}+{ry}"); win.deiconify()
-
-        hdr = tk.Frame(win, bg=BG2, height=48); hdr.pack(fill="x"); hdr.pack_propagate(False)
-        hdr_inner = tk.Frame(hdr, bg=BG2, padx=20); hdr_inner.pack(fill="both", expand=True)
-        tk.Label(hdr_inner, text="\u2398  Duplicate MetaTrader",
-                 bg=BG2, fg=FG, font=(f, 12, "bold")).pack(side="left", fill="y")
-        tk.Frame(win, bg=BORDER, height=1).pack(fill="x")
-        body = tk.Frame(win, bg=BG, padx=24, pady=18); body.pack(fill="both", expand=True)
-
-        # ── Sumber ──
-        tk.Label(body, text="SOURCE", bg=BG, fg=FG3, font=(f, 8), anchor="w").pack(fill="x")
-        src_border = tk.Frame(body, bg=BORDER2, padx=1, pady=1); src_border.pack(fill="x", pady=(4,14))
-        tk.Label(src_border, text=f"  {t['name']}  [{mt_type}]  \u2192  {src_folder}",
-                 bg=BG3, fg=FG2, font=(fm, 9), anchor="w").pack(fill="x", ipady=7, padx=1)
-
-        # ── Jumlah ──
-        tk.Label(body, text="DUPLICATE COUNT  (max. 19)",
-                 bg=BG, fg=FG3, font=(f, 8), anchor="w").pack(fill="x")
-        qty_row = tk.Frame(body, bg=BG); qty_row.pack(fill="x", pady=(4,6))
-        qty_var = tk.IntVar(value=1)
-        def _set_qty(v):
-            try: qty_var.set(max(1, min(19, int(v))))
-            except (ValueError, tk.TclError): pass
-        def _dec(): _set_qty(qty_var.get() - 1)
-        def _inc(): _set_qty(qty_var.get() + 1)
-        dec_h, _ = make_pill_btn(qty_row, "\u2212", _dec, bg=BG3, fg=FG, hover_bg=BG4,
-                                  font_size=12, padx=10, pady=6, radius=7)
-        dec_h.pack(side="left", padx=(0,6))
-        qty_border = tk.Frame(qty_row, bg=BORDER2, padx=1, pady=1); qty_border.pack(side="left", padx=(0,6))
-        qty_entry = tk.Entry(qty_border, textvariable=qty_var, bg=BG3, fg=FG,
-                             insertbackground=ACCENT, relief="flat", font=(f, 11, "bold"),
-                             width=4, justify="center", highlightthickness=0)
-        qty_entry.pack(ipady=6, padx=1)
-        qty_entry.bind("<FocusOut>", lambda _: _set_qty(qty_var.get()))
-        inc_h, _ = make_pill_btn(qty_row, "+", _inc, bg=BG3, fg=FG, hover_bg=BG4,
-                                  font_size=12, padx=10, pady=6, radius=7)
-        inc_h.pack(side="left")
-
-        # ── Toggle custom nama ──
-        tk.Frame(body, bg=BORDER, height=1).pack(fill="x", pady=(10, 8))
-        custom_row = tk.Frame(body, bg=BG); custom_row.pack(fill="x")
-        custom_var = tk.BooleanVar(value=False)
-
-        def _toggle_custom(*_):
-            hint_var.set(_build_hint())
-
-        ck_border = tk.Frame(custom_row, bg=BORDER2, padx=1, pady=1)
-        ck_border.pack(side="left")
-        ck = tk.Checkbutton(ck_border, variable=custom_var, bg=BG3,
-                            activebackground=BG3, selectcolor=BG3,
-                            fg=ACCENT, activeforeground=ACCENT,
-                            relief="flat", highlightthickness=0,
-                            command=_toggle_custom)
-        ck.pack(padx=4, pady=2)
-        tk.Label(custom_row, text="Custom folder name", bg=BG, fg=FG2,
-                 font=(f, 9)).pack(side="left", padx=(8, 0))
-
-        # ── Preview hint ──
-        hint_var = tk.StringVar(value="")
-        tk.Label(body, textvariable=hint_var, bg=BG, fg=FG3, font=(f, 9), anchor="w",
-                 wraplength=490).pack(fill="x", pady=(8, 0))
-
-        def _build_hint():
-            q = qty_var.get()
-            if custom_var.get():
-                return f"\u270e  Folder names will be entered one by one during duplication."
-            names = [f"{base_name} {n}" for n in range(2, 2 + q)]
-            preview = ", ".join(names[:3])
-            if q > 3: preview += ", \u2026"
-            return f"\u2192 folder: {preview}"
-
-        def _update_hint(*_): hint_var.set(_build_hint())
-        qty_var.trace_add("write", _update_hint); _update_hint()
-
-        tk.Frame(win, bg=BORDER, height=1).pack(fill="x")
-        foot = tk.Frame(win, bg=BG2, height=50); foot.pack(fill="x"); foot.pack_propagate(False)
-        fi = tk.Frame(foot, bg=BG2, padx=14); fi.pack(fill="both", expand=True)
-
-        def _run_duplicate():
-            qty = qty_var.get()
-            use_custom = custom_var.get()
-            win.destroy()
-            self._run_mt_duplicate(src_folder, base_name, linux_base, qty, mt_type, use_custom)
-
-        run_h, _ = make_pill_btn(fi, "\u2398  Start Duplicate", _run_duplicate,
-                                  bg="#1a1400", fg=WARN, hover_bg="#2a2000",
-                                  font_size=10, padx=20, pady=7, radius=7)
-        run_h.pack(side="right", pady=8, padx=(0,6))
-        cancel_h, _ = make_pill_btn(fi, "Cancel", win.destroy, bg=BG3, fg=FG, hover_bg=BG4,
-                                    font_size=9, padx=20, pady=6, radius=7)
-        cancel_h.pack(side="right", pady=8)
+        # Simplified flow: always make exactly one duplicate and go straight to
+        # the folder-name prompt (no quantity selector, no custom-name toggle).
+        self._run_mt_duplicate(src_folder, base_name, linux_base, 1, mt_type,
+                               use_custom=True)
 
     def _run_mt_duplicate(self, src_folder, base_name, linux_base, qty, mt_type,
                           use_custom=False):
