@@ -2,7 +2,7 @@
 
 echo "=== Installing dependencies ==="
 sudo apt install -y python3-tk
-sudo apt install -y zenity
+sudo apt install -y yad
 
 echo "=== Creating desktop shortcut ==="
 

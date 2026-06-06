@@ -1143,7 +1143,7 @@ class MTManager:
         if not t:
             return
         DOCS_DIR.mkdir(exist_ok=True)
-        fp = be.pick_file(title=f"Select {label} file",
+        fp = be.yad_pick_file(title=f"Select {label} file",
                               filetypes=["*.ex4", "*.ex5", "*.mq4", "*.mq5"],
                               start_dir=DOCS_DIR, root_widget=self.root)
         if not fp:
@@ -2114,8 +2114,8 @@ class MTManager:
             except Exception: pass
             try: win.grab_release()
             except Exception: pass
-            def _do_pick():
-                result = be.pick_file(title="Select MT Installer File",
+            def _do_yad():
+                result = be.yad_pick_file(title="Select MT Installer File",
                     filetypes=["*.exe"], start_dir=DOCS_DIR, root_widget=self.root)
                 def _back():
                     win.lift(); win.focus_force()
@@ -2126,7 +2126,7 @@ class MTManager:
                     try: win.grab_set()
                     except Exception: pass
                 win.after(0, _back)
-            threading.Thread(target=_do_pick, daemon=True).start()
+            threading.Thread(target=_do_yad, daemon=True).start()
 
         bh_, _ = make_pill_btn(file_row, "\u25a6 Browse", _pick_file,
                                bg=BG3, fg=FG, hover_bg=BG4,
