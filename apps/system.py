@@ -96,7 +96,7 @@ AS_TRACK_OFF_BDR = "#3a4a5f"
 CHK_COL_WIDTH = 36
 CHK_FONT_SIZE = 14
 CHK_CHAR_OFF  = "\u25a1"
-CHK_CHAR_ON   = "\u25a0"
+CHK_CHAR_ON   = "\u2713"
 TABLE_ROW_HEIGHT = 30
 
 # ── Archive types ─────────────────────────────────────────────────────────────

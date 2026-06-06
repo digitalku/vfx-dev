@@ -342,7 +342,7 @@ class MTManager:
         self.chk_tree.pack(side="left", fill="y")
         self.chk_tree.tag_configure("row_even", background=BG3)
         self.chk_tree.tag_configure("row_odd",  background=BG4)
-        self.chk_tree.tag_configure("checked",  background=ACCENT_DIM)
+        self.chk_tree.tag_configure("checked",  background=ACCENT_DIM, foreground=ACCENT3)
         self.chk_tree.tag_configure("cut_dim",  foreground=FG3)
 
         self.cat_tree = ttk.Treeview(tbl_box.inner, columns=("cat",), show="headings",
