@@ -2786,7 +2786,7 @@ class MTManager:
             self._as_cancel_tooltip()
             if iid is not None:
                 self._as_tooltip_id = self._as_canvas.after(
-                    280, lambda: self._as_show_tooltip(event.x_root, event.y_root))
+                    650, lambda: self._as_show_tooltip(event.x_root, event.y_root))
 
     def _on_as_leave(self, _=None):
         if self._as_hover_iid is not None:
