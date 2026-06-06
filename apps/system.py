@@ -39,8 +39,8 @@ def save_config(data: dict):
 
 
 # ── Design Tokens ─────────────────────────────────────────────────────────────
-BG          = "#0d1114"
-BG2         = "#0d1114"
+BG          = "#0a0e11"
+BG2         = "#11181e"
 BG3         = "#171f26"
 BG4         = "#0d171f"
 ACCENT      = "#26b0ff"
@@ -54,8 +54,8 @@ BORDER2     = "#263045"
 DANGER      = "#ff5b5b"
 WARN        = "#f0a030"
 FG          = "#e8edf5"
-FG2         = "#8a95a8"
-FG3         = "#8590a6"
+FG2         = "#aeb9c9"
+FG3         = "#717c8f"
 WHITE       = "#ffffff"
 PURPLE      = "#a78bfa"
 
@@ -67,10 +67,9 @@ DOCS_DIR     = Path.home() / "Documents"
 TABLE_FONT_SIZE    = 10
 TABLE_HEADING_SIZE = 9
 TABLE_COLUMNS = [
-    ("name",     "NAME",     0,   "w",      True),
-    ("type",     "TYPE",     70,  "center", False),
-    ("size",     "SIZE",     80,  "e",      False),
-    ("modified", "MODIFIED", 100, "w",      False),
+    ("name",     "NAME",     0,   "w", True),
+    ("size",     "SIZE",     90,  "e", False),
+    ("modified", "MODIFIED", 130, "e", False),
 ]
 
 # ── Category ──────────────────────────────────────────────────────────────────
@@ -84,7 +83,7 @@ CAT_COLORS = {
 
 # ── Autostart ─────────────────────────────────────────────────────────────────
 AUTOSTART_DIR    = Path.home() / ".config" / "autostart"
-AS_COL_WIDTH     = 48
+AS_COL_WIDTH     = 30
 AS_TRACK_W       = 34
 AS_TRACK_H       = 18
 AS_THUMB_R       = 7
@@ -98,16 +97,46 @@ CHK_COL_WIDTH = 36
 CHK_FONT_SIZE = 14
 CHK_CHAR_OFF  = "\u25a1"
 CHK_CHAR_ON   = "\u25a0"
-TABLE_ROW_HEIGHT = 0
+TABLE_ROW_HEIGHT = 30
 
 # ── Archive types ─────────────────────────────────────────────────────────────
 EXTRACT_EXTS = {".zip", ".rar", ".tar", ".gz", ".bz2", ".xz", ".7z",
                 ".tar.gz", ".tar.bz2", ".tar.xz"}
 
 # ── Font ──────────────────────────────────────────────────────────────────────
-FONT        = "San Francisco"
-FONT_MONO   = "San Francisco"
+# Daftar prioritas; resolve_font() memakai yang pertama tersedia di sistem.
+# Entri terakhir ("Helvetica"/"Courier") selalu ada di Tk sebagai fallback.
+FONT        = ("Inter", "SF Pro Text", "Segoe UI", "Noto Sans",
+               "Ubuntu", "Cantarell", "DejaVu Sans", "Helvetica")
+FONT_MONO   = ("JetBrains Mono", "Cascadia Mono", "SF Mono", "Consolas",
+               "Noto Sans Mono", "DejaVu Sans Mono", "Courier")
 SIDEBAR_W   = 250
+
+
+# ── Disk helpers ────────────────────────────────────────────────────────────────
+def disk_usage(path=None) -> tuple:
+    """Return (free_bytes, total_bytes) untuk partisi yang memuat `path`.
+    Bila path None/tidak ada, naik ke ancestor terdekat; fallback ke home."""
+    try:
+        target = Path(path) if path else ALLOWED_ROOT
+        while not target.exists() and target != target.parent:
+            target = target.parent
+        if not target.exists():
+            target = ALLOWED_ROOT
+        u = shutil.disk_usage(str(target))
+        return u.free, u.total
+    except Exception:
+        return 0, 0
+
+
+def fmt_disk(n: int) -> str:
+    """Bytes → string ringkas (GB/TB)."""
+    gb = n / (1024 ** 3)
+    if gb >= 1024:
+        return f"{gb / 1024:.1f} TB"
+    if gb >= 10:
+        return f"{gb:.0f} GB"
+    return f"{gb:.1f} GB"
 
 
 # ── Archive helpers ────────────────────────────────────────────────────────────
