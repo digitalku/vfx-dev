@@ -83,7 +83,7 @@ CAT_COLORS = {
 
 # ── Autostart ─────────────────────────────────────────────────────────────────
 AUTOSTART_DIR    = Path.home() / ".config" / "autostart"
-AS_COL_WIDTH     = 48
+AS_COL_WIDTH     = 30
 AS_TRACK_W       = 34
 AS_TRACK_H       = 18
 AS_THUMB_R       = 7

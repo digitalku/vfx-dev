@@ -272,6 +272,25 @@ class MTManager:
         info_card.pack(fill="x", padx=1, pady=1)
 
         self._info_fields = {}
+
+        # ── Autostart control (untuk terminal yang sedang dipilih) ──
+        as_col = tk.Frame(info_card, bg=BG2)
+        as_col.pack(side="right", padx=(28, 0))
+        tk.Label(as_col, text="AUTOSTART SAAT BOOT", bg=BG2, fg=FG3,
+                 font=(f, 8), anchor="e").pack(anchor="e")
+        as_row = tk.Frame(as_col, bg=BG2)
+        as_row.pack(anchor="e", pady=(2, 0))
+        self._as_switch = tk.Canvas(as_row, width=38, height=18, bg=BG2,
+                                    highlightthickness=0, cursor="hand2")
+        self._as_switch.pack(side="left")
+        self._as_switch.bind("<Button-1>", self._toggle_selected_autostart)
+        self._as_switch_lbl = tk.Label(as_row, text="—", bg=BG2, fg=FG3,
+                                       font=(f, 10, "bold"))
+        self._as_switch_lbl.pack(side="left", padx=(8, 0))
+        Tooltip(self._as_switch,
+                "Jalankan terminal ini otomatis saat sistem/VPS booting")
+        self._draw_as_switch(False, enabled=False)
+
         for key, label, default in [
             ("terminal", "TERMINAL", "—"),
             ("type",     "TYPE",     "—"),
@@ -726,6 +745,7 @@ class MTManager:
             path_str = "~" + path_str[len(home):]
         self._info_fields["path"][0].set(path_str)
         self._refresh_disk(t["path"])
+        self._update_as_switch(t)
         self._status(f"Path: {t['path']}")
 
     # ── File list ─────────────────────────────────────────────────────────────
@@ -2544,6 +2564,64 @@ class MTManager:
         self._status("Update baru tersedia \u2014 restart untuk menerapkan.")
 
     # ── Autostart canvas ──────────────────────────────────────────────────────
+    # ── Autostart switch (info bar) ─────────────────────────────────────────────
+    def _draw_as_switch(self, on, enabled=True):
+        c = self._as_switch
+        c.delete("all")
+        w, h   = 38, 18
+        tw, th = 34, 16
+        cx, cy = w // 2, h // 2
+        tx1, tx2 = cx - tw // 2, cx + tw // 2
+        ty1, ty2 = cy - th // 2, cy + th // 2
+        r = th // 2
+        thumb_r = 6
+        if not enabled:
+            track, thumb, on = "#1c2636", "#3a4658", False
+        else:
+            track = AS_COLOR_ON if on else AS_COLOR_OFF
+            thumb = AS_THUMB_COL
+        pts = [tx1+r,ty1, tx2-r,ty1, tx2,ty1, tx2,ty1+r,
+               tx2,ty2-r, tx2,ty2, tx2-r,ty2, tx1+r,ty2,
+               tx1,ty2, tx1,ty2-r, tx1,ty1+r, tx1,ty1, tx1+r,ty1]
+        c.create_polygon(pts, smooth=True, fill=track, outline="")
+        thumb_cx = (tx2 - r) if on else (tx1 + r)
+        c.create_oval(thumb_cx - thumb_r, cy - thumb_r,
+                      thumb_cx + thumb_r, cy + thumb_r, fill=thumb, outline="")
+
+    def _update_as_switch(self, t):
+        if t is None:
+            self._draw_as_switch(False, enabled=False)
+            self._as_switch_lbl.config(text="—", fg=FG3)
+            self._as_switch.config(cursor="arrow")
+            return
+        on = be.autostart_is_on(t)
+        self._draw_as_switch(on, enabled=True)
+        self._as_switch_lbl.config(text="ON" if on else "OFF",
+                                   fg=ACCENT3 if on else FG3)
+        self._as_switch.config(cursor="hand2")
+
+    def _toggle_selected_autostart(self, _=None):
+        t = self._terminal(silent=True)
+        if not t:
+            self._status("Pilih terminal dulu untuk mengatur autostart.")
+            return
+        new_state = not be.autostart_is_on(t)
+        ok = be.autostart_set(
+            t, new_state,
+            lambda t_: be.find_exe(t_, "terminal.exe", "terminal64.exe"))
+        if new_state and not ok:
+            themed_popup(self.root, "error", "Autostart Gagal",
+                f"File terminal.exe / terminal64.exe tidak ditemukan\n"
+                f"untuk {t['name']} ({t['type']}).\n\nAutostart tidak dapat dibuat.")
+            return
+        sel = self.term_tree.selection()
+        if sel:
+            self._as_state_cache[sel[0]] = new_state
+        self._update_as_switch(t)
+        self._draw_as_canvas()
+        self._status(f"Autostart {t['name']} → {'ON' if new_state else 'OFF'}")
+
+    # ── Autostart overview (sidebar) ────────────────────────────────────────────
     def _draw_as_canvas(self):
         if getattr(self, "_as_draw_id", None):
             self._as_canvas.after_cancel(self._as_draw_id)
@@ -2563,11 +2641,10 @@ class MTManager:
             return
         yview         = self.term_tree.yview()
         scroll_offset = int(yview[0] * len(all_rows) * rh)
-        cx = cw // 2; tw = AS_TRACK_W; th = AS_TRACK_H
-        tr = th >> 1; thumb_r = AS_THUMB_R
+        cx = cw // 2
         hover = getattr(self, "_as_hover_iid", None)
-        tx1 = cx - (tw >> 1); tx2 = cx + (tw >> 1)
         as_cache = self._as_state_cache
+        dot_r = 5
 
         for idx, iid in enumerate(all_rows):
             if iid not in iid_map:
@@ -2579,20 +2656,18 @@ class MTManager:
             if on is None:
                 on = be.autostart_is_on(iid_map[iid])
                 as_cache[iid] = on
-            is_hover  = (iid == hover)
-            ty1 = y_center - (th >> 1); ty2 = y_center + (th >> 1)
-            track_col = AS_COLOR_ON if on else AS_COLOR_OFF
-            if is_hover:
-                track_col = "#00e6ac" if on else "#3a5570"
-            r   = tr
-            pts = [tx1+r,ty1, tx2-r,ty1, tx2,ty1, tx2,ty1+r,
-                   tx2,ty2-r, tx2,ty2, tx2-r,ty2, tx1+r,ty2,
-                   tx1,ty2, tx1,ty2-r, tx1,ty1+r, tx1,ty1, tx1+r,ty1]
-            c.create_polygon(pts, smooth=True, fill=track_col, outline="")
-            thumb_cx = (tx2 - r) if on else (tx1 + r)
-            c.create_oval(thumb_cx - thumb_r, y_center - thumb_r,
-                          thumb_cx + thumb_r, y_center + thumb_r,
-                          fill=AS_THUMB_COL, outline="")
+            is_hover = (iid == hover)
+            # Indikator status (read-only) — kontrol ada di info bar
+            if on:
+                fill = "#00e6ac" if is_hover else AS_COLOR_ON
+                c.create_oval(cx - dot_r, y_center - dot_r,
+                              cx + dot_r, y_center + dot_r,
+                              fill=fill, outline="")
+            else:
+                ring = "#3a5570" if is_hover else AS_COLOR_OFF
+                c.create_oval(cx - dot_r, y_center - dot_r,
+                              cx + dot_r, y_center + dot_r,
+                              fill="", outline=ring, width=2)
 
     def _as_y_to_iid(self, y: int):
         rh       = 44
@@ -2608,21 +2683,13 @@ class MTManager:
         return iid if iid in getattr(self, "_iid_to_terminal", {}) else None
 
     def _on_as_click(self, event):
+        # Kolom ini kini hanya overview: klik = pilih terminal,
+        # pengaturan autostart dilakukan lewat switch di info bar.
         iid = self._as_y_to_iid(event.y)
         if iid is None:
             return
-        t         = self._iid_to_terminal[iid]
-        new_state = not be.autostart_is_on(t)
-        ok        = be.autostart_set(t, new_state,
-                       lambda t_: be.find_exe(t_, "terminal.exe", "terminal64.exe"))
-        if new_state and not ok:
-            themed_popup(self.root, "error", "Autostart Gagal",
-                f"File terminal.exe / terminal64.exe tidak ditemukan\n"
-                f"untuk {t['name']} ({t['type']}).\n\nAutostart tidak dapat dibuat.")
-            return
-        self._as_state_cache[iid] = new_state
-        self._draw_as_canvas()
-        self._status(f"Autostart {t['name']} \u2192 {'ON' if new_state else 'OFF'}")
+        self.term_tree.selection_set(iid)
+        self.term_tree.see(iid)
 
     def _on_as_motion(self, event):
         iid = self._as_y_to_iid(event.y)
@@ -2656,7 +2723,7 @@ class MTManager:
         tw.configure(bg=BORDER2); tw.attributes("-topmost", True)
         outer = tk.Frame(tw, bg=BORDER2, padx=1, pady=1); outer.pack()
         inner = tk.Frame(outer, bg=BG3, padx=12, pady=7); inner.pack()
-        tk.Label(inner, text="Aktifkan/Nonaktifkan autostart MT saat VPS restart",
+        tk.Label(inner, text="Status autostart — pilih terminal, lalu atur lewat switch di panel info",
                  bg=BG3, fg=FG2, font=(self._font, 9), wraplength=260, justify="left").pack()
         tw.update_idletasks()
         tw_ = tw.winfo_reqwidth(); th_ = tw.winfo_reqheight()
