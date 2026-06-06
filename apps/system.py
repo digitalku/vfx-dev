@@ -167,26 +167,24 @@ def extract_file(path: Path, dest_dir: Path) -> tuple[bool, str]:
         return False, str(e)
 
 
-# ── yad file picker ────────────────────────────────────────────────────────────
-def yad_pick_file(title: str, filetypes: list[str], start_dir: Path,
-                  root_widget=None) -> str | None:
-    """Buka yad file picker. Mengembalikan path string atau None.
+# ── file picker (zenity) ────────────────────────────────────────────────────────
+def pick_file(title: str, filetypes: list[str], start_dir: Path,
+              root_widget=None) -> str | None:
+    """Buka native file picker via zenity (GTK). Return path string atau None.
 
     Semua ekstensi digabung menjadi SATU --file-filter agar langsung tampil
-    semua file yang cocok tanpa harus memilih dari dropdown filter.
-    Format yad: "Label | *.ext1 *.ext2 ..."
+    semua file yang cocok. Format zenity: "Label | *.ext1 *.ext2 ..."
     """
-    cmd = ["yad", "--file-selection",
+    cmd = ["zenity", "--file-selection",
            "--title", title,
-           "--filename", str(start_dir) + "/",
-           "--button=Select:0", "--button=Cancel:1"]
+           "--filename", str(start_dir) + "/"]
     if filetypes:
         # Buat label dari ekstensi: "*.ex4 *.ex5 *.mq4 *.mq5"
         exts  = " ".join(filetypes)
         label = exts.replace("*.", "").replace(" ", "/").upper()  # "EX4/EX5/MQ4/MQ5"
         # Satu filter gabungan → semua ekstensi tampil sekaligus
         cmd += ["--file-filter", f"{label} | {exts}"]
-        # Filter "Semua File" sebagai pilihan kedua
+        # Filter "All Files" sebagai pilihan kedua
         cmd += ["--file-filter", "All Files | *"]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
