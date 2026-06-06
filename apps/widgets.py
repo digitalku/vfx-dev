@@ -279,7 +279,7 @@ class RoundScrollbar(tk.Canvas):
 class Tooltip:
     """Tooltip ringan: satu Toplevel di-reuse (withdraw/deiconify) bukan destroy/recreate."""
 
-    def __init__(self, widget, text, delay=280, position="below"):
+    def __init__(self, widget, text, delay=650, position="below"):
         self.widget   = widget
         self.text     = text
         self.delay    = delay
