@@ -432,7 +432,7 @@ def run_mt_duplicate_bg(src_folder: Path, base_name: str, linux_base: Path,
                 except Exception as e:
                     launch_errors.append(f"[{dst_path.name}] {e}")
             if j < len(launched) - 1:
-                time.sleep(0.3)
+                time.sleep(0.2)
 
         if on_finish:
             was_cancelled = cancelled_flag[0]
