@@ -863,6 +863,15 @@ class MTManager:
         return t.get({"Expert":"experts","Indicator":"indicators",
                       "Script":"scripts","Log":"logs"}.get(label, "experts"))
 
+    def _resolve_path(self, t, cat, fname):
+        """Resolve path lengkap dari (cat, fname).
+        Untuk Log, fname adalah relative path dari terminal root sehingga
+        langsung di-join ke t['path']. Untuk kategori lain tetap pakai _folder_for.
+        """
+        if cat == "Log":
+            return Path(t["path"]) / fname
+        return self._folder_for(t, cat) / fname
+
     # ── Context Menu (klik kanan tabel file) ──────────────────────────────────
     def _on_file_right_click(self, event):
         """Tampilkan context menu Copy/Cut/Paste/Delete saat klik kanan di tabel."""
@@ -988,7 +997,7 @@ class MTManager:
             try:
                 fname = self.file_tree.item(iid, "values")[0]
                 cat   = self.cat_tree.item(iid, "values")[0]
-                src   = self._folder_for(t, cat) / fname
+                src   = self._resolve_path(t, cat, fname)
                 if src.exists():
                     targets.append((src, fname, cat))
             except Exception:
@@ -1002,7 +1011,7 @@ class MTManager:
         cat, fname = self._file_info()
         if not fname:
             return []
-        src = self._folder_for(t, cat) / fname
+        src = self._resolve_path(t, cat, fname)
         if not src.exists():
             return []
         return [(src, fname, cat)]
@@ -1266,7 +1275,7 @@ class MTManager:
                 try:
                     v = self.file_tree.item(iid, "values"); fname = v[0]
                     cat = self.cat_tree.item(iid, "values")[0]
-                    path = self._folder_for(t, cat) / fname
+                    path = self._resolve_path(t, cat, fname)
                     targets.append((fname, path))
                 except Exception:
                     pass
@@ -1289,7 +1298,7 @@ class MTManager:
         cat, fname = self._file_info()
         if not fname:
             self._status("Check the files to delete, or select a row from the table."); return
-        target = self._folder_for(t, cat) / fname
+        target = self._resolve_path(t, cat, fname)
         if not target.exists():
             self._status(f"File not found: {target}"); return
         def _do_single():
@@ -1303,7 +1312,8 @@ class MTManager:
             return
         f  = self._font
         fm = self._font_mono
-        logs_dir  = t.get("logs")
+        logs_dir      = t.get("logs")
+        terminal_path = Path(t["path"])
 
         def _info_popup(title, msg, icon="\u2139", icon_fg=ACCENT):
             w = tk.Toplevel(self.root); w.title(title); w.configure(bg=BG)
@@ -1324,14 +1334,31 @@ class MTManager:
             oh.pack(side="right", pady=8)
             w.update_idletasks(); self._center_win(w); w.deiconify(); w.lift(); w.focus_force()
 
-        if not logs_dir or not logs_dir.exists():
+        # Kumpulkan semua folder logs yang akan di-scan
+        _log_dirs = []
+        if logs_dir and logs_dir.exists():
+            _log_dirs.append(logs_dir)
+        _tester_logs = terminal_path / "Tester" / "logs"
+        if _tester_logs.exists():
+            _log_dirs.append(_tester_logs)
+        _tester_dir = terminal_path / "Tester"
+        if _tester_dir.exists():
+            for _agent_dir in sorted(_tester_dir.iterdir()):
+                if _agent_dir.is_dir() and _agent_dir.name.startswith("Agent"):
+                    _agent_logs = _agent_dir / "logs"
+                    if _agent_logs.exists():
+                        _log_dirs.append(_agent_logs)
+
+        if not _log_dirs:
             _info_popup("Logs Not Found",
                 f"Logs folder not found:\n{logs_dir}\n\n"
                 "Make sure MT has been run at least once.",
                 icon="\u26a0", icon_fg=WARN)
             return
 
-        log_files = [lf for lf in logs_dir.iterdir() if lf.is_file()]
+        log_files = []
+        for _d in _log_dirs:
+            log_files.extend([lf for lf in _d.iterdir() if lf.is_file()])
         if not log_files:
             _info_popup("Logs Empty", "No log files in this terminal.")
             return
@@ -1357,7 +1384,9 @@ class MTManager:
             tk.Label(row, text=val, bg=BG3, fg=FG2, font=(fm, 9), anchor="w").pack(side="left")
         tk.Frame(info_box, bg=BORDER, height=1).pack(fill="x", pady=(8,6))
         for lf in log_files[:8]:
-            tk.Label(info_box, text=f"  {lf.name}", bg=BG3, fg=FG3,
+            try:    _display = str(lf.relative_to(terminal_path))
+            except: _display = lf.name
+            tk.Label(info_box, text=f"  {_display}", bg=BG3, fg=FG3,
                      font=(fm, 8), anchor="w").pack(anchor="w")
         if len(log_files) > 8:
             tk.Label(info_box, text=f"  \u2026 and {len(log_files)-8} more file(s)",
