@@ -1446,8 +1446,8 @@ class MTManager:
             all_files += extra_logs + extra_history
 
         if not all_files:
-            _info_popup("Tidak Ada File",
-                "Tidak ditemukan file log maupun history (.hcs) pada terminal ini.",
+            _info_popup("Tidak Ada FileNo files found",
+                "No log or history (.hcs) files were found on this terminal.",
                 icon="\u26a0", icon_fg=WARN)
             return
 
