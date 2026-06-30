@@ -21,7 +21,7 @@
   {
     "version": "2.1",
     "date": "2026-06-01",
-    "title": "Stabilitas UI",
+    "title": "UI Stability",
     "changes": [
       ["improve", "Scroll synchronization on three-Treeview tables is smoother."],
       ["fix", "White line artifacts on some dialogs removed."]
